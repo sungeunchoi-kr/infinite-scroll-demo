@@ -1,2 +1,2 @@
-# infinite-scroll-demo
+# Infinite Scroll Demo
 Infinite scroll demo using Kanva
