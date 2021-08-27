@@ -6,6 +6,16 @@
 
     <title>Infinite Scroll Demo</title>
 
+    <style>
+        body {
+            margin: 0;
+        }
+
+        #container {
+            background-image: url('https://musecdn.sfo3.digitaloceanspaces.com/tmp/static-light.gif');
+        }
+    </style>
+
     <script type="module">
         document.documentElement.classList.remove('no-js');
         document.documentElement.classList.add('js');
@@ -13,12 +23,25 @@
 
     <script src="https://unpkg.com/konva@^2/konva.min.js"></script>
 </head>
-<body style="margin: 0;">
+<body>
     <div id="container">
 
     </div>
 
     <script>
+        function cap(value, capAt) {
+            if (value < 0) {
+                return Math.min(value*-1, capAt) * -1
+            } else {
+                return Math.min(value, capAt)
+            }
+        }
+
+        function padArrayRight(Arr, size, value=null) {
+            for (let i=0; i<size; ++i) { Arr.push(null) }
+            return Arr
+        }
+
         // Deterministic random
         function mulberry32(a) {
             let t = a += 0x6D2B79F5;
@@ -34,15 +57,20 @@
 
                 const doneflags = []
                 const items = imageSources.map(src => {
-                    const img = new Image()
-
-                    // NOTE: gets called when the image is ready to be used.
-                    img.onload = () => {
+                    if (src == null) {
                         doneflags.push(src)
-                    }
+                        return null
+                    } else {
+                        const img = new Image()
 
-                    img.src = src
-                    return img
+                        // NOTE: gets called when the image is ready to be used.
+                        img.onload = () => {
+                            doneflags.push(src)
+                        }
+
+                        img.src = src
+                        return img
+                    }
                 })
 
                 const masterTimeout = setTimeout(() => {
@@ -76,40 +104,43 @@
             // Starting position of the canvas. We set it to some far away place from <0, 0> b/c
             // there's symmetry with the randomness at around the origin point.
             const startingPosition = {
-                x: Math.floor( Math.random() * 10000),
-                y: Math.floor( Math.random() * 10000),
+                x: Math.floor( Math.random() * 1000000),
+                y: Math.floor( Math.random() * 1000000),
             }
+            
+            const windowWidth = document.documentElement.clientWidth
+            const windowHeight = document.documentElement.clientHeight
 
             // Setup Konva.
             const stage = new Konva.Stage({
                 container: 'container',
-                width: document.documentElement.clientWidth, //window.innerWidth,
-                height: document.documentElement.clientHeight, //window.innerHeight,
+                width: windowWidth,
+                height: windowHeight,
                 draggable: true
             })
-            const layer = new Konva.Layer();
-            stage.add(layer);
+            const layer = new Konva.Layer()
+            stage.add(layer)
 
             //// Define cell width and height.
-            const WIDTH = 200;
-            const HEIGHT = 200;
+            const WIDTH = 200
+            const HEIGHT = 200
 
-            //// Define available color for each cell.
-            // const items = [
-            //     'red', 'yellow', 'green', 'blue', 'orange', 'gray',
-            // ]
+            //// How sparse the images are -- heigher the value, the more sparse.
+            const SPARSENESS = 20
 
             // Define and load images
-            const items = await loadImagesFromURLs([
+            let imageUrls = [
                 'https://www.musesessions.co/images/andreas-forsberg-rMdOHpO3h5E-unsplash-p-800.jpeg',
                 'https://uploads-ssl.webflow.com/60011ca445a22c190aede614/60eb808d8c8efb04c77a68ea_file%20sharing-poster-00001.jpg',
                 'https://www.musesessions.co/images/pelayo-arbues--elZhv-JysI-unsplash-p-500.jpeg',
                 'https://www.musesessions.co/images/soundtrap-uCNrr-3i2oI-unsplash.jpg',
                 'https://www.musesessions.co/images/omid-armin-0cbLoqUyz28-unsplash-p-500.jpeg',
-            ])
+            ]
+            imageUrls = padArrayRight(imageUrls, imageUrls.length*SPARSENESS)
+
+            const items = await loadImagesFromURLs(imageUrls)
 
             function _fillLayer() {
-                //console.log(`pos=<${stage.x()}, ${stage.y()}>`)
 
                 const startX = Math.floor((-stage.x() - stage.width()) / WIDTH) * WIDTH;
                 const endX = Math.floor((-stage.x() + stage.width() * 2) / WIDTH) * WIDTH;
@@ -117,27 +148,32 @@
                 const startY = Math.floor((-stage.y() - stage.height()) / HEIGHT) * HEIGHT;
                 const endY = Math.floor((-stage.y() + stage.height() * 2) / HEIGHT) * HEIGHT;
             
+                // console.log(`pos=<${startX}, ${startY}>`)
+
                 for (var x = startX; x < endX; x += WIDTH) {
                     for (var y = startY; y < endY; y += HEIGHT) {
-                        let indexX = Math.abs((x + startingPosition.x) / WIDTH);
-                        let indexY = Math.abs((y + startingPosition.y) / HEIGHT);
+                        let indexX = (x + startingPosition.x) / WIDTH
+                        let indexY = (y + startingPosition.y) / HEIGHT
+
+                        // If the viewport is in startingPosition, then don't add images there.
+                        if (indexX >= (startingPosition.x/WIDTH) && indexX <= (startingPosition.x+windowWidth)/WIDTH &&
+                            indexY >= (startingPosition.y/HEIGHT) && indexY <= (startingPosition.y+windowHeight)/HEIGHT)
+                        {
+                            continue
+                        }
 
                         // map index |--> element in item, pseudo-random deterministically.
-                        let randv = Math.floor( mulberry32(indexX * indexY) * 12345);
-                        let item = items[ randv % items.length ];
+                        let randv = Math.floor( mulberry32(indexX * indexY) * 12345)
+                        let item = items[ Math.abs(randv % items.length) ]
 
-                        //layer.add(new Konva.Rect({
-                        //    x,
-                        //    y,
-                        //    width: WIDTH,
-                        //    height: HEIGHT,
-                        //    fill: item,
-                        //}))
-                        layer.add(new Konva.Image({
-                            x, y,
-                            width: WIDTH, height: HEIGHT,
-                            image: item,
-                        }))
+                        // recall that `item` may be null to indicate no image drawn.
+                        if (item) {
+                            layer.add(new Konva.Image({
+                                x, y,
+                                width: WIDTH, height: HEIGHT,
+                                image: item,
+                            }))
+                        }
                     }
                 }
             }
@@ -176,8 +212,60 @@
 
                 layer.draw();
             });
+            
+            // Track mouse movement
+            _mouseVelocity = [ 0, 0 ]
+            _prevMousePosition = null // { x:0, y:0, t:0 }
+            document.onmousemove = (ev) => {
+                const x = ev.pageX
+                const y = ev.pageY
 
-            generate();
+                if (_prevMousePosition != null) {
+                    const dt = ( (new Date()) - _prevMousePosition.t ) / 1000
+                    _mouseVelocity = [
+                        (x - _prevMousePosition.x) / dt,
+                        (y - _prevMousePosition.y) / dt,
+                    ]
+                }
+
+                //console.log(`<${JSON.stringify(_mouseVelocity)}`)
+                _prevMousePosition = {
+                    x, y,
+                    t: new Date()
+                }
+            }
+
+            const MOMENTUM_TAPER_FACTOR = 1.33333333
+            const MOMENTUM_MAX_VEL = 15
+            document.onmouseup = (ev) => {
+                const momentumVel = JSON.parse(JSON.stringify(_mouseVelocity))
+                const [ vx_persec, vy_persec ] = momentumVel
+                let vx_perframe = cap(vx_persec / 60/*fps*/, MOMENTUM_MAX_VEL)
+                let vy_perframe = cap(vy_persec / 60/*fps*/, MOMENTUM_MAX_VEL)
+
+                console.log(`mouse up. starting_vel=<${vx_perframe}, ${vy_perframe}>`)
+
+                const step = (t) => {
+                    //console.log(`requestAnimationFrame: ${new Date()}`)
+                    stage.setX(stage.x() + vx_perframe)
+                    stage.setY(stage.y() + vy_perframe)
+
+                    layer.draw()
+
+                    vx_perframe /= MOMENTUM_TAPER_FACTOR
+                    vy_perframe /= MOMENTUM_TAPER_FACTOR
+
+                    if (Math.abs(vx_perframe) > 0.001 && Math.abs(vy_perframe) > 0.001) {
+                        window.requestAnimationFrame(step)
+                    } else {
+                        // requestAnimationFrame() is not called anymore and the animation stops.
+                    }
+                }
+                // 60fps
+                window.requestAnimationFrame(step)
+            }
+
+            generate()
         }
 
         main()
