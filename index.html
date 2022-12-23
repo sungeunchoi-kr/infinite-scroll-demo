@@ -3,12 +3,70 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- <script type="text/javascript" src="gifler.js"></script> -->
+    <script src="https://unpkg.com/konva@3.4.1/konva.min.js"></script>
+    <script src="https://unpkg.com/gifler@0.1.0/gifler.min.js"></script>
 
     <title>Infinite Scroll Demo</title>
 
     <style>
-        body {
+        @font-face { 
+            font-family: Illimite; font-weight: bold; src: url('ILLIMITE-FONT.otf');
+        }
+
+        html,body {
             margin: 0;
+            font-family:  Illimite, sans-serif;
+            height: 100%;
+            background-color: #ebebeb;
+        }
+
+        h3 {
+            font-size: 16px;
+        }
+
+        .world-text {
+            font-size: 52px;
+        }
+
+        .top-nav {
+            max-width: 150px;
+            position: fixed;
+            left: 0;
+            right: 0;
+            margin: 20px auto;
+        }
+
+        .illimite-logo {
+            max-width: 150px;
+        }
+
+        .bottom-logo {
+            max-width: 200px;
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            margin: 20px auto;
+        }
+
+        .info-link {
+            position: fixed;
+            left: 0;
+            bottom: 0;
+            margin: 29px;
+        }
+
+        .selected-work {
+            position: fixed;
+            right: 0;
+            bottom: 0;
+            margin: 29px;
+        }
+
+        .clickable {
+            pointer-events: all;
+            cursor: pointer;
         }
 
         #overlay {
@@ -23,6 +81,34 @@
             z-index: 0;
             background-image: url('https://musecdn.sfo3.digitaloceanspaces.com/tmp/static-light.gif');
         }
+
+        @media only screen and (max-width: 768px) {
+            /* For mobile phones: */
+            .bottom-logo {
+                max-width: 150px;
+                margin: 20px auto;
+            }
+
+            .info-link {
+                margin: 27px;
+                font-size: 12px;
+            }
+
+            .selected-work {
+                /*margin: 26px;*/
+                margin: 27px;
+                font-size: 12px;
+                display: none;
+            }
+
+            .selected-work.mobile {
+                display: block;
+            }
+
+            .world-text {
+                font-size: 18px;
+            }
+        }
     </style>
 
     <script type="module">
@@ -30,18 +116,40 @@
         document.documentElement.classList.add('js');
     </script>
 
-    <script src="https://unpkg.com/konva@^2/konva.min.js"></script>
+    <!-- <script src="https://unpkg.com/konva@^2/konva.min.js"></script> -->
 </head>
 <body>
     <div id="overlay">
-        <div style="width:100%; height:100%; display:flex; align-items:center; justify-content: center;">
-            <h1>centered text<h1>
+        <div class="top-nav clickable">
+            <img class="illimite-logo" src="illimite-logo.gif" />
         </div>
+        <div style="width:100%; height:100%; display:flex; align-items:center; justify-content: center;">
+            <h1 id="world-text" class="world-text"><h1>
+        </div>
+        <img class="bottom-logo clickable" src="illimite-logo-black.png" />
+        <h3 class="info-link clickable">info</h3>
+        <h3 class="selected-work clickable desktop">selected work</h3>
+        <h3 class="selected-work clickable mobile">work</h3>
     </div>
 
     <div id="container">
 
     </div>
+
+
+    <script>
+        var i = 0;
+        var txt = 'The world is y(ours)'; /* The text */
+        var speed = 100; /* The speed/duration of the effect in milliseconds */
+
+        function typeWriter() {
+          if (i < txt.length) {
+            document.getElementById("world-text").innerHTML += txt.charAt(i);
+            i++;
+            setTimeout(typeWriter, speed);
+          }
+        }
+    </script>
 
     <script>
         function cap(value, capAt) {
@@ -145,15 +253,15 @@
 
             // Define and load images
             let imageUrls = [
-                'https://www.musesessions.co/images/andreas-forsberg-rMdOHpO3h5E-unsplash-p-800.jpeg',
-                'https://uploads-ssl.webflow.com/60011ca445a22c190aede614/60eb808d8c8efb04c77a68ea_file%20sharing-poster-00001.jpg',
-                'https://www.musesessions.co/images/pelayo-arbues--elZhv-JysI-unsplash-p-500.jpeg',
-                'https://www.musesessions.co/images/soundtrap-uCNrr-3i2oI-unsplash.jpg',
-                'https://www.musesessions.co/images/omid-armin-0cbLoqUyz28-unsplash-p-500.jpeg',
+                'https://isostudio.co/1-pic.png',
+                'https://isostudio.co/1-video.png',
+                'https://isostudio.co/illimite-logo.gif',
+                'https://isostudio.co/illimite-sphere.gif',
             ]
             imageUrls = padArrayRight(imageUrls, imageUrls.length*SPARSENESS)
 
             const items = await loadImagesFromURLs(imageUrls)
+
 
             function _fillLayer() {
 
@@ -180,18 +288,48 @@
                         // map index |--> element in item, pseudo-random deterministically.
                         let randv = Math.floor( mulberry32(indexX * indexY) * 12345)
                         let item = items[ Math.abs(randv % items.length) ]
+                        var canvas = document.createElement('canvas');
 
-                        // recall that `item` may be null to indicate no image drawn.
+                        // recall that `item` may be null to indicate no image drawn...
                         if (item) {
-                            layer.add(new Konva.Image({
-                                x, y,
-                                width: WIDTH, height: HEIGHT,
-                                image: item,
-                            }))
+
+                            if(item.src.split('.').pop() == "png") {
+                                console.log("\n\n\n ITEM IS IMAGE... is item thumbnail? add video link")
+                                layer.add(new Konva.Image({
+                                    x, y,
+                                    width: WIDTH, height: HEIGHT,
+                                    image: item,
+                                }))
+                            }   
+                            else if (item.src.split('.').pop() == "gif") {
+                                console.log("\n\n\n ITEM IS GIF... animate")
+                                  
+                                      // use external library to parse and draw gif animation
+                                      function onDrawFrame(ctx, frame) {
+                                        // update canvas that we are using for Konva.Image
+                                        // DONT USE ctx.clearRect(0, 0, canvas.width, canvas.height);
+                                        ctx.drawImage(frame.buffer, frame.x, frame.y);
+                                        // redraw the layer
+                                        layer.draw();
+                                      }
+
+                                gifler('https://media1.giphy.com/media/l4pTpdRiFv10jFlNC/200w_d.gif').frames(canvas, onDrawFrame, true);
+                                      // draw resulted canvas into the stage as Konva.Image
+                                      layer.add(new Konva.Image({
+                                            x, y,
+                                            width: WIDTH, height: HEIGHT,
+                                            image: canvas,
+                                        }))
+                                
+
+                            } else {
+                                // item is not png or gif so maybe not compatible?
+                            }
                         }
                     }
                 }
             }
+
             // Generates random cells on the canvas and draws the canvas.
             const generate = () => {
                 console.log(new Date().toISOString() + ' generate()')
@@ -284,6 +422,7 @@
         }
 
         main()
+        typeWriter()
     </script>
 </body>
 </html>
