@@ -223,12 +223,44 @@
     </script>
 
     <script>
+        class CanvasImageCache {
+
+            constructor() {
+                this.cache = new Map()
+            }
+
+            deriveKey(x, y) {
+                return JSON.stringify([x,y])
+            }
+
+            has(x, y) {
+                return this.cache[this.deriveKey(x, y)]
+            }
+
+            get(x, y) {
+                return this.cache[this.deriveKey(x, y)] || null
+            }
+
+            set(x, y, img) {
+                this.cache[this.deriveKey(x, y)] = img
+                window._imgCache = this.cache
+            }
+
+            delete(x, y) {
+                const img = this.get(x, y)
+                if (img) {
+                    this.cache.delete(this.deriveKey(x, y))
+                }
+            }
+
+        }
+
         const main = async () => {
             // Starting position of the canvas. We set it to some far away place from <0, 0> b/c
             // there's symmetry with the randomness at around the origin point.
             const startingPosition = {
-                x: Math.floor( Math.random() * 1000000),
-                y: Math.floor( Math.random() * 1000000),
+                x: Math.floor( Math.random() * 1000000 ),
+                y: Math.floor( Math.random() * 1000000 ),
             }
             
             const windowWidth = document.documentElement.clientWidth
@@ -244,9 +276,12 @@
             const layer = new Konva.Layer()
             stage.add(layer)
 
+            //// Gif fps (used to adjust the speed of calls to `updateGifAnimation()`.)
+            const GIF_FPS = 16
+
             //// Define cell width and height.
-            const WIDTH = 200
-            const HEIGHT = 200
+            const CELL_WIDTH = 200
+            const CELL_HEIGHT = 200
 
             //// How sparse the images are -- heigher the value, the more sparse.
             const SPARSENESS = 20
@@ -255,85 +290,166 @@
             let imageUrls = [
                 'https://isostudio.co/1-pic.png',
                 'https://isostudio.co/1-video.png',
-                'https://isostudio.co/illimite-logo.gif',
-                'https://isostudio.co/illimite-sphere.gif',
+                'https://media1.giphy.com/media/l4pTpdRiFv10jFlNC/200w_d.gif',
+                // 'https://isostudio.co/illimite-logo.gif', // does not work due to cross-origin error.
+                // 'https://isostudio.co/illimite-sphere.gif', // does not work due to cross-origin error.
             ]
             imageUrls = padArrayRight(imageUrls, imageUrls.length*SPARSENESS)
 
+            // array of 'HTMLImageElement's.
             const items = await loadImagesFromURLs(imageUrls)
 
+            // used to recall which images were already drawn on the Konva stage so that
+            // we do not redraw the images on calls to `_fillLayer()`.
+            const imgCache = new CanvasImageCache()
+
+            /**
+             * @description adds an HTMLImageElement item to a Konva layer at the specified position.
+             * 
+             * @params x the x position on the Konva stage.
+             * @params y the y position on the Konva stage.
+             * @params stage the Konva stage on which to add the image.
+             * @params layer the Konva layer on which to add the image.
+             * @params item the HTMLImageElement which will be drawn.
+             */
+            function addItemToKonvaAtPosition({ x, y, stage, layer, item }) {
+                // check for duplicate item in the canvas (keyed by `item.currentSrc`.)
+                let isDuplicate = stage.findOne(node => 
+                    (node.attrs.image||{}).currentSrc === item.currentSrc
+                )
+                if (isDuplicate) {
+                    // and do not draw if it is a duplicate.
+                    // TODO: disable not drawing duplicates for now.
+                    // return
+                }
+
+                // draw the items.
+                if (item.src.split('.').pop() == "png") {
+                    // console.log("ITEM IS IMAGE... is item thumbnail? add video link")
+                    const img = new Konva.Image({
+                        x, y,
+                        width: CELL_WIDTH, height: CELL_HEIGHT,
+                        image: item,
+                    })
+                    layer.add(img)
+                    return img
+                } else if (item.src.split('.').pop() == "gif") {
+                    // console.log(new Date().toISOString() + " ITEM IS GIF... animate")
+                    console.log(`creating gif at [${x}, ${y}].`)
+                    let canvas = document.createElement('canvas')
+                    canvas.currentSrc = item.currentSrc
+
+                    // use external library to parse and draw gif animation
+                    const onDrawFrameId = (window._counter == null ? window._counter = 0 : window._counter++) || 0
+                    let onDrawFrame = (ctx, frame) => {
+                        if (onDrawFrame._destroyed) { return }
+
+                        // update canvas that we are using for Konva.Image
+                        ctx.clearRect(0, 0, canvas.width, canvas.height)
+                        ctx.drawImage(frame.buffer, frame.x, frame.y)
+
+                        // console.log(`onDrawFrame id=${onDrawFrameId} redrawing.`)
+
+                        // a call to `layer.draw()` is necessary at this point for the animation to update;
+                        // this is called independently of this callback. See `updateGifAnimation()`.
+                    }
+
+                    let gif = gifler(item.src)
+                        .frames(canvas, onDrawFrame, true)
+
+                    const img = new Konva.Image({
+                        x, y,
+                        width: CELL_WIDTH, height: CELL_HEIGHT,
+                        image: canvas,
+                    })
+                    img.gif = gif
+                    gif.canvas = canvas
+                    gif.onDrawFrame = onDrawFrame
+
+                    // draw resulted canvas into the stage as Konva.Image
+                    layer.add(img)
+                    return img
+                } else {
+                    // item is not png or gif so maybe not compatible?
+                    return null
+                }
+            }
+
+            // update gif animations.
+            setInterval(function updateGifAnimation() {
+                layer.draw()
+            }, parseInt(1000 / GIF_FPS))
 
             function _fillLayer() {
 
-                const startX = Math.floor((-stage.x() - stage.width()) / WIDTH) * WIDTH;
-                const endX = Math.floor((-stage.x() + stage.width() * 2) / WIDTH) * WIDTH;
+                const startX = Math.floor((-stage.x() - stage.width() * 2) / CELL_WIDTH) * CELL_WIDTH;
+                const endX = Math.floor((-stage.x() + stage.width() * 2) / CELL_WIDTH) * CELL_WIDTH;
             
-                const startY = Math.floor((-stage.y() - stage.height()) / HEIGHT) * HEIGHT;
-                const endY = Math.floor((-stage.y() + stage.height() * 2) / HEIGHT) * HEIGHT;
+                const startY = Math.floor((-stage.y() - stage.height() * 2) / CELL_HEIGHT) * CELL_HEIGHT;
+                const endY = Math.floor((-stage.y() + stage.height() * 2) / CELL_HEIGHT) * CELL_HEIGHT;
             
-                // console.log(`pos=<${startX}, ${startY}>`)
+                // console.log(`start=<${startX}, ${startY}> end=<${endX}, ${endY}>`)
 
-                for (var x = startX; x < endX; x += WIDTH) {
-                    for (var y = startY; y < endY; y += HEIGHT) {
-                        let indexX = (x + startingPosition.x) / WIDTH
-                        let indexY = (y + startingPosition.y) / HEIGHT
+                for (let x=startX; x<endX; x+=CELL_WIDTH) {
+                    for (let y=startY; y<endY; y+=CELL_HEIGHT) {
+                        let indexX = (x + startingPosition.x) / CELL_WIDTH
+                        let indexY = (y + startingPosition.y) / CELL_HEIGHT
 
                         // If the viewport is in startingPosition, then don't add images there.
-                        if (indexX >= (startingPosition.x/WIDTH) && indexX <= (startingPosition.x+windowWidth)/WIDTH &&
-                            indexY >= (startingPosition.y/HEIGHT) && indexY <= (startingPosition.y+windowHeight)/HEIGHT)
+                        if (indexX >= (startingPosition.x/CELL_WIDTH) && indexX <= (startingPosition.x+windowWidth)/CELL_WIDTH &&
+                            indexY >= (startingPosition.y/CELL_HEIGHT) && indexY <= (startingPosition.y+windowHeight)/CELL_HEIGHT)
                         {
                             continue
                         }
 
                         // map index |--> element in item, pseudo-random deterministically.
-                        let randv = Math.floor( mulberry32(indexX * indexY) * 12345)
+                        let randv = Math.floor( mulberry32(indexX * indexY) * 12345 )
                         let item = items[ Math.abs(randv % items.length) ]
-                        var canvas = document.createElement('canvas');
 
-                        // recall that `item` may be null to indicate no image drawn...
-                        if (item) {
-
-                            if(item.src.split('.').pop() == "png") {
-                                console.log("\n\n\n ITEM IS IMAGE... is item thumbnail? add video link")
-                                layer.add(new Konva.Image({
-                                    x, y,
-                                    width: WIDTH, height: HEIGHT,
-                                    image: item,
-                                }))
-                            }   
-                            else if (item.src.split('.').pop() == "gif") {
-                                console.log("\n\n\n ITEM IS GIF... animate")
-                                  
-                                      // use external library to parse and draw gif animation
-                                      function onDrawFrame(ctx, frame) {
-                                        // update canvas that we are using for Konva.Image
-                                        // DONT USE ctx.clearRect(0, 0, canvas.width, canvas.height);
-                                        ctx.drawImage(frame.buffer, frame.x, frame.y);
-                                        // redraw the layer
-                                        layer.draw();
-                                      }
-
-                                gifler('https://media1.giphy.com/media/l4pTpdRiFv10jFlNC/200w_d.gif').frames(canvas, onDrawFrame, true);
-                                      // draw resulted canvas into the stage as Konva.Image
-                                      layer.add(new Konva.Image({
-                                            x, y,
-                                            width: WIDTH, height: HEIGHT,
-                                            image: canvas,
-                                        }))
-                                
-
-                            } else {
-                                // item is not png or gif so maybe not compatible?
-                            }
+                        // recall that `item` may be null to indicate no image drawn.
+                        if (!item) {
+                            continue
                         }
+
+                        // if Konva element already created and drawn at the coordinate,
+                        // then do not create a new Konva element.
+                        if (imgCache.has(x, y)) {
+                            continue
+                        }
+
+                        let img = addItemToKonvaAtPosition({ x, y, stage, layer, item })
+                        if (img) {
+                            imgCache.set(x, y, img)
+                        }
+                    } //end for
+                } // end for
+
+                // gc: remove images that are not in bounds [startX, startY], [endX, endY].
+                stage.find(node => {
+                    let image = (node.attrs||{}).image
+                    if (image == null) {
+                        return
                     }
-                }
+
+                    let { x, y } = node.attrs
+                    if (x >= startX && x <= endX && y >= startY && y <= endY) {
+                    } else {
+                        console.log(`gc: node at [${x},${y}] src=%O`, image.currentSrc)
+                        if (node.gif) {
+                            console.log(`gc: ---- node is a gif, so destroying gif animations.`)
+                            console.log(`gc: node.gif=%O`, node.gif)
+                            node.gif.onDrawFrame._destroyed = true
+                            node.gif.canvas = null
+                        }
+                        node.destroy()
+                        imgCache.delete(x, y)
+                    }
+                })
             }
 
             // Generates random cells on the canvas and draws the canvas.
             const generate = () => {
-                console.log(new Date().toISOString() + ' generate()')
-                layer.destroyChildren();
+                // console.log('generate()')
                 _fillLayer();
                 layer.draw();
             }
