@@ -82,6 +82,68 @@
             background-image: url('https://musecdn.sfo3.digitaloceanspaces.com/tmp/static-light.gif');
         }
 
+        /* The Modal (background) */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 101; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgb(0,0,0); /* Fallback color */
+            background-color: rgba(0,0,0,0.8); /* Black w/ opacity */
+        }
+
+        /* Modal Content/Box */
+        .modal-content {
+            margin: auto;
+            position: fixed;
+            border: none;
+            top: 0; 
+            right: 0;
+            bottom: 10%; 
+            left: 0;
+            width: 80%;
+            height: 70%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        iframe {
+            position: fixed;
+            border: none;
+            top: 0; 
+            right: 0;
+            bottom: 0; 
+            left: 0;
+            width: 80%;
+            height: 70%;
+            margin: auto;
+            background: #000;
+        }
+
+        /* The Close Button */
+        
+        .close-container {
+            width: 100%;
+            text-align: right;
+        }
+
+        .close {
+            color: #aaa;
+            font-size: 30px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        } 
+
         @media only screen and (max-width: 768px) {
             /* For mobile phones: */
             .bottom-logo {
@@ -131,6 +193,17 @@
         <h3 class="selected-work clickable desktop">selected work</h3>
         <h3 class="selected-work clickable mobile">work</h3>
     </div>
+
+    <div id="preview-modal" class="modal">
+        <!-- Modal content -->
+        <div class="modal-content">
+            <div class="close-container">
+                <span class="close">X</span>
+            </div>  
+            <iframe id="video-player" src="" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>
+
+        </div>
+    </div>  
 
     <div id="container">
 
@@ -288,11 +361,53 @@
 
             // Define and load images
             let imageUrls = [
-                'https://isostudio.co/1-pic.png',
                 'https://isostudio.co/1-video.png',
-                'https://media1.giphy.com/media/l4pTpdRiFv10jFlNC/200w_d.gif',
-                // 'https://isostudio.co/illimite-logo.gif', // does not work due to cross-origin error.
-                // 'https://isostudio.co/illimite-sphere.gif', // does not work due to cross-origin error.
+                'assets/1.gif',
+                // 'assets/2.gif',
+                'assets/3.gif',
+                'assets/beats-thumbnail.jpg',
+                'assets/future-thumbnail.jpg',
+                'assets/indeed-thumbnail.jpg',
+                'assets/meta-thumbnail.jpg',
+                'assets/meta1-thumbnail.jpg',
+                'assets/280373872_358374803054997_3733058869536173686_n.jpg',
+                'assets/280647871_127817029860651_2358455762407028103_n.jpg',
+                'assets/280949610_3208680726064334_1146079602666200109_n.jpg',
+                'assets/298487074_112685738243314_5043768275969956443_n.jpg',
+                'assets/305517477_494769561988950_8033367198622348693_n.jpg',
+                'assets/305567074_868812654091374_4202634672864066621_n.jpg',
+                'assets/305692184_759234905303456_8229107894966760562_n.jpg',
+                'assets/305795132_114151108094070_7506372645062503514_n.jpg',
+                'assets/305801019_1141909966671780_970602267566598694_n.jpg',
+                'assets/305842012_386339023668081_8716317119524350370_n.jpg',
+                'assets/305880835_403336591885093_3854788660841228261_n.jpg',
+                'assets/306211390_134345022662552_9033638108674286767_n.jpg',
+                'assets/306219315_5581790805199938_3786434431157336850_n.jpg',
+                'assets/306233382_803875547416923_2353105033895360315_n.jpg',
+                'assets/306258502_5394537153971934_4977817014791061999_n.jpg',
+                'assets/311453888_837318987620719_7590722358484658350_n.jpg',
+                'assets/311590354_661739119003224_5476058113431711540_n.jpg',
+                'assets/311602675_791704348754243_1861536636710010547_n.jpg',
+                'assets/311662009_507887898015764_3228778957176662668_n.jpg',
+                'assets/314552984_980549846118730_4021988403041273531_n.jpg',
+                'assets/314930238_517414946925488_4198451888227544175_n.jpg',
+                'assets/315150180_207847701659920_609965868377340645_n.jpg',
+                'assets/315297943_1328709467867632_1471328512794777708_n.jpg',
+                'assets/315297946_195053379665510_3096266147955503254_n.jpg',
+                'assets/315303158_506213531562975_2674142521008924364_n.jpg',
+                'assets/315315035_1514918405674137_7006913601164045157_n.jpg',
+                'assets/315638870_654907766185141_515030176690954104_n.jpg',
+                'assets/316002998_890737798967704_3460463896875378500_n.jpg',
+                'assets/316003783_654858019619958_2388968552484271644_n.jpg',
+                'assets/318583491_3434969080059537_4525185036887943831_n.jpg',
+                'assets/318768307_530913515764857_5769327717268077959_n.jpg',
+                'assets/318952606_509508894489700_8609771085487151883_n.jpg',
+                'assets/319013683_3271440653171291_8093326372639565642_n.jpg',
+                'assets/319050286_101976899401921_7403375800902608589_n.jpg',
+                'assets/319319130_468477601895112_3933548271149297312_n.jpg',
+                'assets/323787154_1281257162432572_6607482664975761130_n.jpg',
+                'assets/324126031_528327092403996_4581470688632551711_n.jpg',
+                'assets/324162495_1573693773057438_5714035459193953711_n.jpg',
             ]
             imageUrls = padArrayRight(imageUrls, imageUrls.length*SPARSENESS)
 
@@ -302,6 +417,35 @@
             // used to recall which images were already drawn on the Konva stage so that
             // we do not redraw the images on calls to `_fillLayer()`.
             const imgCache = new CanvasImageCache()
+
+
+
+
+            // Get the preview modal
+            var modal = document.getElementById("preview-modal");
+            
+            // Get the <span> element that closes the modal
+            var span = document.getElementsByClassName("close")[0];
+
+            //get the video player
+
+            var iframe = document.getElementById("video-player");
+
+            // When the user clicks on <span> (x), close the modal
+            span.onclick = function() {
+              iframe.src = "";
+              modal.style.display = "none";
+            }
+
+            // When the user clicks anywhere outside of the modal, close it
+            window.onclick = function(event) {
+              if (event.target == modal) {
+                iframe.src = "";
+                modal.style.display = "none";
+              }
+            } 
+
+
 
             /**
              * @description adds an HTMLImageElement item to a Konva layer at the specified position.
@@ -323,14 +467,67 @@
                     // return
                 }
 
+                var imgWidth = item.width;
+                var imgHeight = item.height;
+
+                if(imgWidth > 1000 || imgHeight > 1000) {
+                    imgWidth = imgWidth/3;
+                    imgHeight = imgHeight/3;
+                } else if (imgWidth > 500 || imgHeight > 500) {
+                    imgWidth = imgWidth/2;
+                    imgHeight = imgHeight/2;
+                }
+
                 // draw the items.
-                if (item.src.split('.').pop() == "png") {
-                    // console.log("ITEM IS IMAGE... is item thumbnail? add video link")
+                if (item.src.split('.').pop() == "png" || item.src.split('.').pop() == "jpg") {
+                    // console.log("ITEM IS IMAGE...")
                     const img = new Konva.Image({
                         x, y,
-                        width: CELL_WIDTH, height: CELL_HEIGHT,
+                        width: imgWidth, height: imgHeight,
                         image: item,
                     })
+
+                    if (item.src.includes("thumbnail")) {
+                        console.log("ITEM IS VIDEO THUMBNAIL... make clickable and show video player")
+                        
+                        img.on('mouseover', function(evt) {
+                            var shape = evt.target;
+                            document.body.style.cursor = 'pointer';
+                            // img.translate(x,y);
+                            // img.translate(-x,-y);
+                            // img.draw or layer.draw?
+                            img.draw();
+                        });
+                        
+                        img.on('mouseout', function(evt) {
+                            var shape = evt.target;
+                            document.body.style.cursor = 'default';
+                            shape.scaleX(1);
+                            shape.scaleY(1);
+                            // img.draw or layer.draw?
+                            img.draw();
+                        });
+                        // img.on('mousedown', function () {
+                            console.log('Mousedown circle');
+                            
+                        // });
+                        img.on('mouseup touchdown', function () {
+                            
+                            if(item.src.includes("meta")) {
+                                iframe.src = "https://player.vimeo.com/video/745469900";
+                            } else if (item.src.includes("beats")) {
+                                iframe.src = "https://player.vimeo.com/video/724746522";
+                            } else if (item.src.includes("future")) {
+                                iframe.src = "https://player.vimeo.com/video/432148063";
+                            } else if (item.src.includes("indeed")) {
+                                iframe.src = "https://player.vimeo.com/video/753453838";
+                            }
+
+                            //show video player overlay
+                            modal.style.display = "block";
+                        });
+                    }
+
                     layer.add(img)
                     return img
                 } else if (item.src.split('.').pop() == "gif") {
@@ -362,6 +559,7 @@
                         width: CELL_WIDTH, height: CELL_HEIGHT,
                         image: canvas,
                     })
+
                     img.gif = gif
                     gif.canvas = canvas
                     gif.onDrawFrame = onDrawFrame
