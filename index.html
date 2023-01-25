@@ -21,6 +21,11 @@
             background-color: #ebebeb;
         }
 
+        body {
+            overscroll-behavior: contain;
+            overflow: hidden;
+        }
+
         h3 {
             font-size: 16px;
         }
@@ -170,6 +175,15 @@
             .world-text {
                 font-size: 18px;
             }
+
+            /* Modal Content/Box */
+            .modal-content {
+                height: 40%;
+            }
+
+            iframe {
+                height: 40%;
+            }
         }
     </style>
 
@@ -225,6 +239,19 @@
     </script>
 
     <script>
+        
+        function isMobile(){
+            if(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)){
+                console.log("ITS MOBILE");
+                return true
+           }
+           else{
+                console.log("NOT MOBILE");
+                return false
+           }
+        } 
+
+
         function cap(value, capAt) {
             if (value < 0) {
                 return Math.min(value*-1, capAt) * -1
@@ -357,7 +384,10 @@
             const CELL_HEIGHT = 200
 
             //// How sparse the images are -- heigher the value, the more sparse.
-            const SPARSENESS = 20
+            var SPARSENESS = 20
+            if(isMobile()) {
+                SPARSENESS = 10
+            }
 
             // Define and load images
             let imageUrls = [
@@ -470,12 +500,22 @@
                 var imgWidth = item.width;
                 var imgHeight = item.height;
 
-                if(imgWidth > 1000 || imgHeight > 1000) {
-                    imgWidth = imgWidth/3;
-                    imgHeight = imgHeight/3;
-                } else if (imgWidth > 500 || imgHeight > 500) {
-                    imgWidth = imgWidth/2;
-                    imgHeight = imgHeight/2;
+                if(!isMobile()) {
+                    if(imgWidth > 1000 || imgHeight > 1000) {
+                        imgWidth = imgWidth/3;
+                        imgHeight = imgHeight/3;
+                    } else if (imgWidth > 500 || imgHeight > 500) {
+                        imgWidth = imgWidth/2;
+                        imgHeight = imgHeight/2;
+                    }
+                } else {
+                    if(imgWidth > 1000 || imgHeight > 1000) {
+                        imgWidth = imgWidth/5;
+                        imgHeight = imgHeight/5;
+                    } else if (imgWidth > 500 || imgHeight > 500) {
+                        imgWidth = imgWidth/3;
+                        imgHeight = imgHeight/3;
+                    }
                 }
 
                 // draw the items.
@@ -511,7 +551,7 @@
                             console.log('Mousedown circle');
                             
                         // });
-                        img.on('mouseup touchdown', function () {
+                        img.on('mouseup touchend', function () {
                             
                             if(item.src.includes("meta")) {
                                 iframe.src = "https://player.vimeo.com/video/745469900";
